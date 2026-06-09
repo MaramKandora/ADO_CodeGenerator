@@ -1,0 +1,12 @@
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.csproj.AssemblyReference.cache
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.GeneratedMSBuildEditorConfig.editorconfig
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.AssemblyInfoInputs.cache
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.AssemblyInfo.cs
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.csproj.CoreCompileInputs.cache
+E:\MyApp\ADO_CodeGenerator_Business\bin\Debug\net8.0\ADO_CodeGenerator_Business.deps.json
+E:\MyApp\ADO_CodeGenerator_Business\bin\Debug\net8.0\ADO_CodeGenerator_Business.dll
+E:\MyApp\ADO_CodeGenerator_Business\bin\Debug\net8.0\ADO_CodeGenerator_Business.pdb
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.dll
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\refint\ADO_CodeGenerator_Business.dll
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.pdb
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ref\ADO_CodeGenerator_Business.dll

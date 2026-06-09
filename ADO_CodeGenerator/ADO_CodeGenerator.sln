@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37216.2 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ADO_CodeGenerator", "ADO_CodeGenerator.csproj", "{00B75B8A-D6E1-42EB-B68A-718E0E0929AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ADO_CodeGenerator_Business", "..\ADO_CodeGenerator_Business\ADO_CodeGenerator_Business.csproj", "{CEA4BD4D-BFD1-4631-A1CB-A07F38EE51EC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{00B75B8A-D6E1-42EB-B68A-718E0E0929AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00B75B8A-D6E1-42EB-B68A-718E0E0929AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00B75B8A-D6E1-42EB-B68A-718E0E0929AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00B75B8A-D6E1-42EB-B68A-718E0E0929AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEA4BD4D-BFD1-4631-A1CB-A07F38EE51EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEA4BD4D-BFD1-4631-A1CB-A07F38EE51EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEA4BD4D-BFD1-4631-A1CB-A07F38EE51EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEA4BD4D-BFD1-4631-A1CB-A07F38EE51EC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7E8D8C2B-8D52-4E58-BA80-7C4F3B4B6157}
+	EndGlobalSection
+EndGlobal
