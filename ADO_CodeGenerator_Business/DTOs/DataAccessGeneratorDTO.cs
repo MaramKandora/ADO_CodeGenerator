@@ -12,8 +12,9 @@ namespace GeneratorBusiness.DTOs
     {
         public string FolderName;
         public string DataAccessProjectPath;
-        //"Server=.; Database=LibraryDB; User Id=sa; Password=123456; TrustServerCertificate = true;"
-        public string ConnectionString = "Data Source=(local);Initial Catalog=MySchool;Integrated Security=True;Asynchronous Processing=true;";
+        //
+        //"Data Source=(local);Initial Catalog=MySchool;Integrated Security=True; TrustServerCertificate = true;"
+        public string ConnectionString = "Server=.; Database=LibraryDB; User Id=sa; Password=123456; TrustServerCertificate = true;";
 
         public enDataAccessMode DataAccessMode = enDataAccessMode.Queries;
 

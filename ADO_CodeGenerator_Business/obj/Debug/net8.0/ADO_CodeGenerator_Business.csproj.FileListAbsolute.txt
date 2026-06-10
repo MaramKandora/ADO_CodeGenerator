@@ -10,3 +10,4 @@ E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.
 E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\refint\ADO_CodeGenerator_Business.dll
 E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.pdb
 E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ref\ADO_CodeGenerator_Business.dll
+E:\MyApp\ADO_CodeGenerator_Business\obj\Debug\net8.0\ADO_CodeGenerator_Business.sourcelink.json

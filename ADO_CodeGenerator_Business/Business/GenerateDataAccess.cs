@@ -24,7 +24,8 @@ namespace GeneratorBusiness
         StringBuilder _Template = new StringBuilder();
         Dictionary<string, Dictionary<string, string>> _EntityNameToProperties = new Dictionary<string, Dictionary<string, string>>();
         // propertyName, DataType
-        Dictionary<string, List<string>> _EntityToPrimaryKey = new Dictionary<string, List<string>>();
+        Dictionary<string, Dictionary<string,bool>> _EntityToPrimaryKey = new Dictionary<string, Dictionary<string, bool>>();
+        // PkName , IsIdentity
         Dictionary<string, Dictionary<string, string>> _EntityToDtosClassNames = new Dictionary<string, Dictionary<string, string>>();
         //DtoFunction, DtoName
         Dictionary<string, string> _EntityToTableName = new Dictionary<string, string>();
@@ -175,31 +176,50 @@ namespace GeneratorBusiness
 
         private void SavePrimaryKeysPerEntity()
         {
-            using (SqlConnection connection = new SqlConnection(_dto.ConnectionString))
+
+            using SqlConnection connection = new SqlConnection(_dto.ConnectionString);
+
+            connection.Open();
+
+            foreach (var Pair in _EntityToTableName)
             {
-                connection.Open();
-                String[] ColumnRestrictions = new String[4];
+                string Query = @$"SELECT
+                                    c.name AS ColumnName,
+                                    c.is_identity
+                                FROM sys.indexes i
+                                JOIN sys.index_columns ic
+                                    ON i.object_id = ic.object_id
+                                   AND i.index_id = ic.index_id
+                                JOIN sys.columns c
+                                    ON ic.object_id = c.object_id
+                                   AND ic.column_id = c.column_id
+                                WHERE i.is_primary_key = 1
+                                  AND i.object_id = OBJECT_ID('{Pair.Value}');"; //return primaryKeys of Table
+                using SqlCommand Command = new SqlCommand(Query, connection);
 
+                using SqlDataReader reader = Command.ExecuteReader();
+               
 
-
-                foreach (var Pair in _EntityToTableName)
+                Dictionary<string, bool> PrimaryKeyToIsIdentity = new Dictionary<string, bool>();
+                while(reader.Read()) 
                 {
-                    ColumnRestrictions[2] = Pair.Value;
-                    DataTable dtIndexes = connection.GetSchema("IndexColumns", ColumnRestrictions);
-                    List<string> PrimaryKeysOfEntity = new List<string>();
-                    foreach (DataRow row in dtIndexes.Rows)
-                    {
-                        if (row["CONSTRAINT_NAME"].ToString().StartsWith("PK_"))
-                        {
-                            PrimaryKeysOfEntity.Add(row["COLUMN_NAME"].ToString());
-                        }
-                    }
 
-                    _EntityToPrimaryKey.Add(Pair.Key, PrimaryKeysOfEntity);
+                    if (reader.GetBoolean(reader.GetOrdinal("is_identity")))
+                    {
+                        PrimaryKeyToIsIdentity.Add(reader.GetString(reader.GetOrdinal("ColumnName")), true);
+                    }
+                    else
+                    {
+                        PrimaryKeyToIsIdentity.Add(reader.GetString(reader.GetOrdinal("ColumnName")), false);
+                    }
+                    
                 }
 
-
+                _EntityToPrimaryKey.Add(Pair.Key, PrimaryKeyToIsIdentity);
             }
+
+
+
         }
 
         void GenerateDtoClasses(string EntityName, string FolderName)
@@ -217,30 +237,31 @@ namespace GeneratorBusiness
 
 
             Dictionary<string, string> DtoFunctionToClassName = new Dictionary<string, string>();
-            DtoFunctionToClassName.Add(nameof(enDtoFunction.GetById), $"{EntityName}DTO");
+            DtoFunctionToClassName.Add(nameof(enDtoFunction.Get), $"{EntityName}DTO");
             DtoFunctionToClassName.Add(nameof(enDtoFunction.Add), $"Add{EntityName}DTO");
             DtoFunctionToClassName.Add(nameof(enDtoFunction.Update), $"Update{EntityName}DTO");
-            DtoFunctionToClassName.Add(nameof(enDtoFunction.Delete), $"Delete{EntityName}DTO");
+            //DtoFunctionToClassName.Add(nameof(enDtoFunction.Delete), $"Delete{EntityName}DTO");
 
             _EntityToDtosClassNames.Add(EntityName, DtoFunctionToClassName);
 
 
-            StringBuilder GetDtoText = new StringBuilder(ClassTextHelper(NameSpace, DtoFunctionToClassName[nameof(enDtoFunction.GetById)]));
+            StringBuilder GetDtoText = new StringBuilder(ClassTextHelper(NameSpace, DtoFunctionToClassName[nameof(enDtoFunction.Get)]));
             StringBuilder AddDtoText = new StringBuilder(ClassTextHelper(NameSpace, DtoFunctionToClassName[nameof(enDtoFunction.Add)]));
             StringBuilder UpdateDtoText = new StringBuilder(ClassTextHelper(NameSpace, DtoFunctionToClassName[nameof(enDtoFunction.Update)]));
-            StringBuilder DeleteDtoText = new StringBuilder(ClassTextHelper(NameSpace, DtoFunctionToClassName[nameof(enDtoFunction.Delete)]));
+           // StringBuilder DeleteDtoText = new StringBuilder(ClassTextHelper(NameSpace, DtoFunctionToClassName[nameof(enDtoFunction.Delete)]));
 
             Dictionary<string, string> Properties = _EntityNameToProperties[EntityName];
-            List<string> PrimaryKeys = _EntityToPrimaryKey[EntityName];
+            Dictionary<string,bool> PrimaryKeyToIsIdentity = _EntityToPrimaryKey[EntityName];
 
             foreach (var PropertyPair in Properties)
             {
                 GetDtoText.AppendLine(PropertyTextHelper(PropertyPair.Key, PropertyPair.Value));
 
-                //check if property is a primary key
-                if (PrimaryKeys.Exists(x => x == PropertyPair.Key))
+                //check if property is a primary key and not identity
+                if (PrimaryKeyToIsIdentity.Keys.ToList().Exists(x => x == PropertyPair.Key))
                 {
-                    DeleteDtoText.AppendLine(PropertyTextHelper(PropertyPair.Key, PropertyPair.Value));
+                    if (PrimaryKeyToIsIdentity[PropertyPair.Key] == false)
+                        AddDtoText.AppendLine(PropertyTextHelper(PropertyPair.Key, PropertyPair.Value));
                 }
                 else
                 {
@@ -252,14 +273,14 @@ namespace GeneratorBusiness
             GetDtoText.Append(CloseClassTextHelper());
             AddDtoText.Append(CloseClassTextHelper());
             UpdateDtoText.Append(CloseClassTextHelper());
-            DeleteDtoText.Append(CloseClassTextHelper());
+            //DeleteDtoText.Append(CloseClassTextHelper());
 
 
             Dictionary<string, string> DTONametoText = new Dictionary<string, string>();
             DTONametoText.Add($"{EntityName}DTO", GetDtoText.ToString());
             DTONametoText.Add($"Add{EntityName}DTO", AddDtoText.ToString());
             DTONametoText.Add($"Update{EntityName}DTO", UpdateDtoText.ToString());
-            DTONametoText.Add($"Delete{EntityName}DTO", DeleteDtoText.ToString());
+            //DTONametoText.Add($"Delete{EntityName}DTO", DeleteDtoText.ToString());
 
             foreach (var Pair in DTONametoText)
             {
@@ -281,13 +302,13 @@ namespace GeneratorBusiness
         }
 
         private void UpdateFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName
-            ,Dictionary<string,string> PropertyToVariable, Dictionary<string,string> PrimaryKeysToVariable)
+            , Dictionary<string, string> PropertyToVariable, Dictionary<string, string> PrimaryKeysToVariable)
         {
             string PropertiesToUpdate = String.Join(", ",
                             _EntityNameToProperties[EntityName].Keys.Where(E =>
-                           !_EntityToPrimaryKey[EntityName].Exists(PK => PK == E)
+                           !_EntityToPrimaryKey[EntityName].Keys.ToList().Exists(PK => PK == E)
                             ));
-           
+
 
             string VariablesString = "";
             foreach (var pair in PropertyToVariable)
@@ -352,21 +373,22 @@ namespace GeneratorBusiness
         }
         private void AddFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName)
         {
-
-            string PropertiesToAdd = String.Join(", ",
-                            _EntityNameToProperties[EntityName].Keys.Where(E =>
-                           !_EntityToPrimaryKey[EntityName].Exists(PK => PK == E)
-                            ));
-            List<string> VariablesList = new List<string>();
-            foreach (var PropertyPair in _EntityNameToProperties[EntityName])
+            var PropertiesToAddList = _EntityNameToProperties[EntityName].Keys.ToList().Where(E =>
             {
-                if (!_EntityToPrimaryKey[EntityName].Exists(PK => PK == PropertyPair.Key))
+                foreach (var Pk in _EntityToPrimaryKey[EntityName])
                 {
-                    VariablesList.Add($"@{PropertyPair.Key}");
-                }
-            }
+                    if (Pk.Key == E && Pk.Value == true)
+                        return false; //property to add should not be an identity primary key
 
-            string VariablesString = String.Join(", ", VariablesList);
+                }
+                return true;
+            });
+
+
+            string PropertiesToAddString = String.Join(", ",
+                            PropertiesToAddList);
+
+            string VariablesString = String.Join(", ", $"@{PropertiesToAddString}");
 
             switch (Mode)
             {
@@ -375,15 +397,15 @@ namespace GeneratorBusiness
 
 
                         _Template.Append($"                string Query = @\"INSERT INTO {_EntityToTableName[EntityName]} (");
-                        _Template.AppendLine($"{PropertiesToAdd})");
+                        _Template.AppendLine($"{PropertiesToAddString})");
                         _Template.AppendLine($"                                 VALUES ({VariablesString})");
                         _Template.AppendLine($"                                 SELECT SCOP_IDENTITY();\";\n");
                         _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
                         _Template.AppendLine($"                {{");
-                        foreach (var Variable in VariablesList)
+                        foreach (var Property in PropertiesToAddList)
                         {
-                            _Template.Append($"                    Command.Parameters.AddWithValue(\"{Variable}\", ");
-                            _Template.AppendLine($"dto.{_EntityNameToProperties[EntityName].FirstOrDefault(x => x.Key == Variable.Remove(0, 1)).Key});");
+                            _Template.Append($"                    Command.Parameters.AddWithValue(\"@{Property}\", ");
+                            _Template.AppendLine($"dto.{Property});");
                         }
                         _Template.AppendLine($"                    try");
                         _Template.AppendLine($"                    {{");
@@ -410,12 +432,12 @@ namespace GeneratorBusiness
 
             }
         }
-        private void GetByIdFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName, string GetDto)
+        private void GetFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName, string GetDto)
         {
-           
+
             List<string> PKVariablesList = new List<string>();
 
-            foreach (string PrimaryKeyName in _EntityToPrimaryKey[EntityName])
+            foreach (string PrimaryKeyName in _EntityToPrimaryKey[EntityName].Keys.ToList())
             {
                 PKVariablesList.Add(String.Join(" = ", new[] { PrimaryKeyName, $"@{PrimaryKeyName}" }));
             }
@@ -432,10 +454,10 @@ namespace GeneratorBusiness
                         _Template.AppendLine($"                                 WHERE {PKVariablesString};\";\n");
                         _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
                         _Template.AppendLine($"                {{");
-                        foreach (var PK in _EntityToPrimaryKey[EntityName])
+                        foreach (var PK in _EntityToPrimaryKey[EntityName].Keys.ToList())
                         {
-                            _Template.Append($"                    Command.Parameters.AddWithValue(\"@{PK}\", ");
-                            _Template.AppendLine($"dto.{PK});");
+                            _Template.AppendLine($"                    Command.Parameters.AddWithValue(\"@{PK}\", {PK});");
+
                         }
                         _Template.AppendLine($"                    try");
                         _Template.AppendLine($"                    {{");
@@ -448,9 +470,9 @@ namespace GeneratorBusiness
                         _Template.AppendLine($"                                 {{");
                         foreach (var PropertyPair in _EntityNameToProperties[EntityName])
                         {
-                           
+
                             _Template.AppendLine($"                                     {PropertyPair.Key} = Reader.{Utility.MapDataTypeToReaderMethod(PropertyPair.Value)}(Reader.GetOrdinal(\"{PropertyPair.Key}\")),");
-                           
+
 
                         }
                         _Template.AppendLine($"                                 }};");
@@ -472,12 +494,12 @@ namespace GeneratorBusiness
             }
         }
 
-        private void DeleteFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName)
+        private void DeleteFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName, List<string> PksList)
         {
 
             List<string> PKVariablesList = new List<string>();
 
-            foreach (string PrimaryKeyName in _EntityToPrimaryKey[EntityName])
+            foreach (string PrimaryKeyName in PksList)
             {
                 PKVariablesList.Add(String.Join(" = ", new[] { PrimaryKeyName, $"@{PrimaryKeyName}" }));
             }
@@ -494,9 +516,9 @@ namespace GeneratorBusiness
                         _Template.AppendLine($"                                 WHERE {PKVariablesString};\";\n");
                         _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
                         _Template.AppendLine($"                {{");
-                        foreach (var PK in _EntityToPrimaryKey[EntityName])
+                        foreach (var PK in PksList)
                         {
-                            _Template.AppendLine($"                    Command.Parameters.AddWithValue(\"@{PK}\", Id);");
+                            _Template.AppendLine($"                    Command.Parameters.AddWithValue(\"@{PK}\", {PK});");
 
                         }
                         _Template.AppendLine($"                    try");
@@ -538,14 +560,14 @@ namespace GeneratorBusiness
         private void AppendUpdateFunction(string EntityName, string ConnectionString)
         {
             string UpdateDtoName = _EntityToDtosClassNames[EntityName][nameof(enDtoFunction.Update)];
-           
+
             Dictionary<string, string> PropertyToVariable = new Dictionary<string, string>();
             Dictionary<string, string> PrimaryKeysToVariable = new Dictionary<string, string>();
 
             _Template.Append($"        public async Task <bool> UpdateAsync ({UpdateDtoName} dto");
             foreach (var PropertyPair in _EntityNameToProperties[EntityName])
             {
-                if (_EntityToPrimaryKey[EntityName].Exists(PK => PK == PropertyPair.Key))
+                if (_EntityToPrimaryKey[EntityName].Keys.ToList().Exists(PK => PK == PropertyPair.Key))
                 {
                     _Template.Append($", {PropertyPair.Value} {PropertyPair.Key}");
                     PrimaryKeysToVariable.Add(PropertyPair.Key, $"@{PropertyPair.Key}");
@@ -561,7 +583,7 @@ namespace GeneratorBusiness
             _Template.AppendLine($"            int AffectedRows = 0;");
             _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
             _Template.AppendLine($"            {{");
-            UpdateFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName,PropertyToVariable,PrimaryKeysToVariable);
+            UpdateFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName, PropertyToVariable, PrimaryKeysToVariable);
             _Template.AppendLine($"            }}");
             _Template.AppendLine($"            return AffectedRows != 0;");
             _Template.AppendLine($"        }}\n");
@@ -570,13 +592,22 @@ namespace GeneratorBusiness
 
         private void AppendGetByIdFunction(string EntityName, string ConnectionString)
         {
-            string GetDtoName = _EntityToDtosClassNames[EntityName][nameof(enDtoFunction.GetById)];
-            _Template.AppendLine($"        public async Task <{GetDtoName}> GetByIdAsync (int Id)");
+            string GetDtoName = _EntityToDtosClassNames[EntityName][nameof(enDtoFunction.Get)];
+            List<string> PkNames = _EntityToPrimaryKey[EntityName].Keys.ToList();
+            _Template.Append($"        public async Task <{GetDtoName}?> GetAsync (");
+            foreach (var PkName in PkNames)
+            {
+                string PkDataType = _EntityNameToProperties[EntityName][PkName];
+                _Template.Append($"{PkDataType} {PkName}, ");
+
+            }
+            _Template = _Template.Remove(_Template.Length - 2, 2);
+            _Template.AppendLine(")");
             _Template.AppendLine($"        {{");
             _Template.AppendLine($"            {GetDtoName}? dto = null;");
             _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
             _Template.AppendLine($"            {{");
-            GetByIdFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName,GetDtoName);
+            GetFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName, GetDtoName);
             _Template.AppendLine($"            }}");
             _Template.AppendLine($"            return dto;");
             _Template.AppendLine($"        }}\n");
@@ -584,12 +615,22 @@ namespace GeneratorBusiness
 
         private void AppendDeleteFunction(string EntityName, string ConnectionString)
         {
-            _Template.AppendLine($"        public async Task <bool> DeleteAsync (int Id)");
+            List<string> PkNames = _EntityToPrimaryKey[EntityName].Keys.ToList();
+            _Template.Append($"        public async Task <bool> DeleteAsync (");
+
+            foreach (var PkName in PkNames)
+            {
+                string PkDataType = _EntityNameToProperties[EntityName][PkName];
+                _Template.Append($"{PkDataType} {PkName}, ");
+
+            }
+            _Template = _Template.Remove(_Template.Length - 2, 2);
+            _Template.AppendLine(")");
             _Template.AppendLine($"        {{");
             _Template.AppendLine($"            int AffectedRows = 0;");
             _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
             _Template.AppendLine($"            {{");
-            DeleteFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName);
+            DeleteFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName,PkNames);
             _Template.AppendLine($"            }}");
             _Template.AppendLine($"            return AffectedRows > 0;");
             _Template.AppendLine($"        }}\n");
@@ -622,7 +663,7 @@ namespace GeneratorBusiness
                                     , GetNamespace($"{_DtosFolderName}\\{_EntityToTableName[EntityName]}", _dto.DataAccessProjectPath)
                                     ,"Microsoft.Data.SqlClient"}));
             _Template.AppendLine($"        string {ConnectionStringVName} = \"\";");
-            _Template.AppendLine($"        {RepoName} (string connectionstring)");
+            _Template.AppendLine($"        public {RepoName} (string connectionstring)");
             _Template.AppendLine($"        {{");
             _Template.AppendLine($"             {ConnectionStringVName} = connectionstring;");
             _Template.AppendLine($"        }}\n");
@@ -636,9 +677,9 @@ namespace GeneratorBusiness
 
         }
 
-        public bool InjectPackage(string Projectpath,string PackageName, string Version)
+        public bool InjectPackage(string Projectpath, string PackageName, string Version)
         {
-          var csprojFile=  Directory.GetFiles($"{Projectpath}","*.csproj");
+            var csprojFile = Directory.GetFiles($"{Projectpath}", "*.csproj");
             if (csprojFile.Length > 1)
             {
                 return false; //there are more than one .csproj file...user should specify which one to write the references on
@@ -652,7 +693,7 @@ namespace GeneratorBusiness
 
 
             XElement ItemGroup = csprojFileContent.Root.Element("ItemGroup");
-            if ( ItemGroup == null)
+            if (ItemGroup == null)
             {
                 ItemGroup = new XElement("ItemGroup");
                 csprojFileContent.Root.Add(ItemGroup);
@@ -666,7 +707,7 @@ namespace GeneratorBusiness
                 return false; //we already added the package
             ItemGroup.Add(PackageReference);
 
-  
+
 
             csprojFileContent.Save(csprojFile[0]);
 
@@ -693,9 +734,9 @@ namespace GeneratorBusiness
             GenerateDTOs();
             GenerateRepos();
             if (_dto.TargetPlatform == enTargetPlatform.NetCore)
-                InjectPackage(_dto.DataAccessProjectPath, "Microsoft.Data.SqlClient","7.0.1");
+                InjectPackage(_dto.DataAccessProjectPath, "Microsoft.Data.SqlClient", "7.0.1");
             //TODO: Next fix the composit PK issue
-                   
+
         }
     }
 

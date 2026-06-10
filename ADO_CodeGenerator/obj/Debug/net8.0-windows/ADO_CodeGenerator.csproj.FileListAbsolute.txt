@@ -60,3 +60,4 @@ E:\MyApp\ADO_CodeGenerator\obj\Debug\net8.0-windows\ADO_CodeGenerator.pdb
 E:\MyApp\ADO_CodeGenerator\obj\Debug\net8.0-windows\ADO_CodeGenerator.genruntimeconfig.cache
 E:\MyApp\ADO_CodeGenerator\obj\Debug\net8.0-windows\ref\ADO_CodeGenerator.dll
 E:\MyApp\ADO_CodeGenerator\bin\Debug\net8.0-windows\Microsoft.Build.Locator.dll
+E:\MyApp\ADO_CodeGenerator\obj\Debug\net8.0-windows\ADO_CodeGenerator.sourcelink.json
