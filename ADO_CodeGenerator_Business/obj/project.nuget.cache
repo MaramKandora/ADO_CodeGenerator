@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "eqhfMjCb3FA=",
+  "dgSpecHash": "xJWGi4NHJFs=",
   "success": true,
   "projectFilePath": "E:\\MyApp\\ADO_CodeGenerator_Business\\ADO_CodeGenerator_Business.csproj",
   "expectedPackageFiles": [
@@ -28,5 +28,15 @@
     "C:\\Users\\mm02m\\.nuget\\packages\\system.security.cryptography.pkcs\\8.0.1\\system.security.cryptography.pkcs.8.0.1.nupkg.sha512",
     "C:\\Users\\mm02m\\.nuget\\packages\\system.security.cryptography.protecteddata\\8.0.0\\system.security.cryptography.protecteddata.8.0.0.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1900",
+      "level": "Warning",
+      "message": "Error occurred while getting package vulnerability data: The download of 'https://api.nuget.org/v3-vulnerabilities/2026.07.16.05.27.22/vulnerability.base.json' timed out because no data was received for 60000ms.",
+      "projectPath": "E:\\MyApp\\ADO_CodeGenerator_Business\\ADO_CodeGenerator_Business.csproj",
+      "warningLevel": 1,
+      "filePath": "E:\\MyApp\\ADO_CodeGenerator_Business\\ADO_CodeGenerator_Business.csproj",
+      "targetGraphs": []
+    }
+  ]
 }

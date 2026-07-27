@@ -88,8 +88,7 @@
               "RelativeToolTip": "..\\ADO_CodeGenerator_Business\\Business\\GenerateBusiness.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-10T04:49:03.159Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-10T04:49:03.159Z"
             },
             {
               "$type": "Document",
@@ -99,7 +98,7 @@
               "RelativeDocumentMoniker": "..\\ADO_CodeGenerator_Business\\Business\\GenerateDataAccess.cs",
               "ToolTip": "E:\\MyApp\\ADO_CodeGenerator_Business\\Business\\GenerateDataAccess.cs",
               "RelativeToolTip": "..\\ADO_CodeGenerator_Business\\Business\\GenerateDataAccess.cs",
-              "ViewState": "AgIAAIYBAAAAAAAAAAAiwJEBAABiAAAAAAAAAA==",
+              "ViewState": "AgIAAOcCAAAAAAAAAAAkwPMCAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-08T03:34:59.952Z",
               "EditorCaption": ""
@@ -126,8 +125,7 @@
               "RelativeToolTip": "..\\ADO_CodeGenerator_Business\\Enums\\enDtoFunction.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-09T00:15:13.375Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-09T00:15:13.375Z"
             },
             {
               "$type": "Document",
@@ -149,7 +147,7 @@
               "RelativeDocumentMoniker": "..\\ADO_CodeGenerator_Business\\DTOs\\DataAccessGeneratorDTO.cs",
               "ToolTip": "E:\\MyApp\\ADO_CodeGenerator_Business\\DTOs\\DataAccessGeneratorDTO.cs",
               "RelativeToolTip": "..\\ADO_CodeGenerator_Business\\DTOs\\DataAccessGeneratorDTO.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAqAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-08T03:47:40.878Z",
               "EditorCaption": ""

@@ -371,19 +371,14 @@ namespace GeneratorBusiness
 
             }
         }
-        private void AddFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName)
+        private void AddFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName, bool AnyIdentityPK)
         {
             var PropertiesToAddList = _EntityNameToProperties[EntityName].Keys.ToList().Where(E =>
-            {
-                foreach (var Pk in _EntityToPrimaryKey[EntityName])
-                {
-                    if (Pk.Key == E && Pk.Value == true)
-                        return false; //property to add should not be an identity primary key
 
-                }
-                return true;
-            });
+                !_EntityToPrimaryKey[EntityName].Any(pk => pk.Key == E && pk.Value == true)
+            );
 
+            
 
             string PropertiesToAddString = String.Join(", ",
                             PropertiesToAddList);
@@ -398,8 +393,12 @@ namespace GeneratorBusiness
 
                         _Template.Append($"                string Query = @\"INSERT INTO {_EntityToTableName[EntityName]} (");
                         _Template.AppendLine($"{PropertiesToAddString})");
-                        _Template.AppendLine($"                                 VALUES ({VariablesString})");
-                        _Template.AppendLine($"                                 SELECT SCOP_IDENTITY();\";\n");
+                        _Template.Append($"                                 VALUES ({VariablesString})");
+                        if (AnyIdentityPK)
+                            _Template.AppendLine($"\n                                 SELECT SCOP_IDENTITY();\";\n");
+                        else
+                            _Template.AppendLine($";\";\n");
+
                         _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
                         _Template.AppendLine($"                {{");
                         foreach (var Property in PropertiesToAddList)
@@ -410,11 +409,19 @@ namespace GeneratorBusiness
                         _Template.AppendLine($"                    try");
                         _Template.AppendLine($"                    {{");
                         _Template.AppendLine($"                         Connection.Open();\n");
-                        _Template.AppendLine($"                         var result = await Command.ExecuteScalarAsync();\n");
-                        _Template.AppendLine($"                         if (result != null && int.TryParse(result.ToString(), out int InsertedId))");
-                        _Template.AppendLine($"                         {{");
-                        _Template.AppendLine($"                             NewId = InsertedId;");
-                        _Template.AppendLine($"                         }}\n");
+                        if (AnyIdentityPK)
+                        {
+                            _Template.AppendLine($"                         var result = await Command.ExecuteScalarAsync();\n");
+                            _Template.AppendLine($"                         if (result != null && int.TryParse(result.ToString(), out int InsertedId))");
+                            _Template.AppendLine($"                         {{");
+                            _Template.AppendLine($"                             NewId = InsertedId;");
+                            _Template.AppendLine($"                         }}\n");
+                        }
+                        else
+                        {
+                            _Template.AppendLine($"                         AffectedRows = await Command.ExecuteNonQueryAsync();\n");
+
+                        }
                         _Template.AppendLine($"                    }}");
                         _Template.AppendLine($"                    catch");
                         _Template.AppendLine($"                    {{");
@@ -546,14 +553,29 @@ namespace GeneratorBusiness
         private void AppendAddFunction(string EntityName, string ConnectionString)
         {
             string AddDtoName = _EntityToDtosClassNames[EntityName][nameof(enDtoFunction.Add)];
-            _Template.AppendLine($"        public async Task <int?> AddAsync ({AddDtoName} dto)");
-            _Template.AppendLine($"        {{");
-            _Template.AppendLine($"            int? NewId = null;");
+            bool isThereIdentityPK = _EntityToPrimaryKey[EntityName].Any(x => x.Value == true);
+
+            if (isThereIdentityPK)
+            {
+                _Template.AppendLine($"        public async Task <int?> AddAsync ({AddDtoName} dto)");
+                _Template.AppendLine($"        {{");
+                _Template.AppendLine($"            int? NewId = null;");
+            }
+            else
+            {
+                _Template.AppendLine($"        public async Task <bool> AddAsync ({AddDtoName} dto)");
+                _Template.AppendLine($"        {{");
+                _Template.AppendLine($"            int AffectedRows = 0;");
+            }
+                
             _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
             _Template.AppendLine($"            {{");
-            AddFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName);
+            AddFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName, isThereIdentityPK);
             _Template.AppendLine($"            }}");
-            _Template.AppendLine($"            return NewId;");
+            if (isThereIdentityPK)
+                _Template.AppendLine($"            return NewId;");
+            else
+                _Template.AppendLine($"            return AffectedRows != 0;");
             _Template.AppendLine($"        }}\n");
         }
 
@@ -735,7 +757,10 @@ namespace GeneratorBusiness
             GenerateRepos();
             if (_dto.TargetPlatform == enTargetPlatform.NetCore)
                 InjectPackage(_dto.DataAccessProjectPath, "Microsoft.Data.SqlClient", "7.0.1");
-            //TODO: Next fix the composit PK issue
+           
+            //TODO: fix the Linq code structure in GenerateRepo()
+            //TODO: make sure InjectPackage() function is correct
+            //TODO: Add code of Stored procedures mode
 
         }
     }
