@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ADO_CodeGenerator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bd4cb3425d22978b5616eeb9797c6e1859abcd0d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2d603afa3fc25f6fdcf1132948121932902b797")]
 [assembly: System.Reflection.AssemblyProductAttribute("ADO_CodeGenerator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ADO_CodeGenerator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -306,7 +306,7 @@ namespace GeneratorBusiness
         {
             string PropertiesToUpdate = String.Join(", ",
                             _EntityNameToProperties[EntityName].Keys.Where(E =>
-                           !_EntityToPrimaryKey[EntityName].Keys.ToList().Exists(PK => PK == E)
+                           !_EntityToPrimaryKey[EntityName].Keys.Contains(E)
                             ));
 
 
@@ -332,32 +332,30 @@ namespace GeneratorBusiness
                     {
 
 
-                        _Template.Append($"                string Query = @\"Update {_EntityToTableName[EntityName]} (");
+                        _Template.Append($"            string Query = @\"Update {_EntityToTableName[EntityName]} (");
                         _Template.AppendLine($"{PropertiesToUpdate})");
-                        _Template.AppendLine($"                                 SET {VariablesString}");
-                        _Template.AppendLine($"                                 WHERE {PrimaryKeysVariableString};\";");
-                        _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
-                        _Template.AppendLine($"                {{");
+                        _Template.AppendLine($"                             SET {VariablesString}");
+                        _Template.AppendLine($"                             WHERE {PrimaryKeysVariableString};\";\n");
+                        _Template.AppendLine($"            using SqlCommand Command = new SqlCommand(Query, Connection);");
                         foreach (var pair in PropertyToVariable)
                         {
-                            _Template.Append($"                    Command.Parameters.AddWithValue(\"{pair.Value}\", ");
+                            _Template.Append($"            Command.Parameters.AddWithValue(\"{pair.Value}\", ");
                             _Template.AppendLine($"dto.{pair.Key});");
                         }
                         foreach (var pair in PrimaryKeysToVariable)
                         {
-                            _Template.Append($"                    Command.Parameters.AddWithValue(\"{pair.Value}\", ");
+                            _Template.Append($"            Command.Parameters.AddWithValue(\"{pair.Value}\", ");
                             _Template.AppendLine($"{pair.Key});");
                         }
-                        _Template.AppendLine($"                    try");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                         Connection.Open();\n");
-                        _Template.AppendLine($"                         AffectedRows = await Command.ExecuteNonQueryAsync();\n");
+                        _Template.AppendLine($"            try");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"                 Connection.Open();\n");
+                        _Template.AppendLine($"                 AffectedRows = await Command.ExecuteNonQueryAsync();\n");
 
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                    catch");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                }}");
+                        _Template.AppendLine($"            }}");
+                        _Template.AppendLine($"            catch");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"            }}");
 
                         break;
                     }
@@ -373,10 +371,10 @@ namespace GeneratorBusiness
         }
         private void AddFunctionCodeBasedOnDataAccessMode(enDataAccessMode Mode, string EntityName, bool AnyIdentityPK)
         {
-            var PropertiesToAddList = _EntityNameToProperties[EntityName].Keys.ToList().Where(E =>
+            var PropertiesToAddList = _EntityNameToProperties[EntityName].Keys.Where(E =>
 
                 !_EntityToPrimaryKey[EntityName].Any(pk => pk.Key == E && pk.Value == true)
-            );
+            ).ToList();
 
             
 
@@ -391,48 +389,48 @@ namespace GeneratorBusiness
                     {
 
 
-                        _Template.Append($"                string Query = @\"INSERT INTO {_EntityToTableName[EntityName]} (");
+                        _Template.Append($"            string Query = @\"INSERT INTO {_EntityToTableName[EntityName]} (");
                         _Template.AppendLine($"{PropertiesToAddString})");
-                        _Template.Append($"                                 VALUES ({VariablesString})");
+                        _Template.Append($"                             VALUES ({VariablesString})");
                         if (AnyIdentityPK)
-                            _Template.AppendLine($"\n                                 SELECT SCOP_IDENTITY();\";\n");
+                            _Template.AppendLine($"\n                             SELECT SCOP_IDENTITY();\";\n");
                         else
                             _Template.AppendLine($";\";\n");
 
-                        _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
-                        _Template.AppendLine($"                {{");
+                        _Template.AppendLine($"            using SqlCommand Command = new SqlCommand(Query, Connection);");
+
                         foreach (var Property in PropertiesToAddList)
                         {
-                            _Template.Append($"                    Command.Parameters.AddWithValue(\"@{Property}\", ");
+                            _Template.Append($"            Command.Parameters.AddWithValue(\"@{Property}\", ");
                             _Template.AppendLine($"dto.{Property});");
                         }
-                        _Template.AppendLine($"                    try");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                         Connection.Open();\n");
+                        _Template.AppendLine($"            try");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"                 Connection.Open();\n");
                         if (AnyIdentityPK)
                         {
-                            _Template.AppendLine($"                         var result = await Command.ExecuteScalarAsync();\n");
-                            _Template.AppendLine($"                         if (result != null && int.TryParse(result.ToString(), out int InsertedId))");
-                            _Template.AppendLine($"                         {{");
-                            _Template.AppendLine($"                             NewId = InsertedId;");
-                            _Template.AppendLine($"                         }}\n");
+                            _Template.AppendLine($"                 var result = await Command.ExecuteScalarAsync();\n");
+                            _Template.AppendLine($"                 if (result != null && int.TryParse(result.ToString(), out int InsertedId))");
+                            _Template.AppendLine($"                 {{");
+                            _Template.AppendLine($"                     NewId = InsertedId;");
+                            _Template.AppendLine($"                 }}\n");
                         }
                         else
                         {
-                            _Template.AppendLine($"                         AffectedRows = await Command.ExecuteNonQueryAsync();\n");
+                            _Template.AppendLine($"                 AffectedRows = await Command.ExecuteNonQueryAsync();\n");
 
                         }
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                    catch");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                }}");
+                        _Template.AppendLine($"            }}");
+                        _Template.AppendLine($"            catch");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"            }}");
+
                         break;
                     }
 
                 case enDataAccessMode.StoredProcedures:
                     {
-
+                        //TODO:
                         break;
                     }
 
@@ -457,38 +455,38 @@ namespace GeneratorBusiness
                     {
 
 
-                        _Template.AppendLine($"                string Query = @\"SELECT * FROM {_EntityToTableName[EntityName]}");
-                        _Template.AppendLine($"                                 WHERE {PKVariablesString};\";\n");
-                        _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
-                        _Template.AppendLine($"                {{");
+                        _Template.AppendLine($"            string Query = @\"SELECT * FROM {_EntityToTableName[EntityName]}");
+                        _Template.AppendLine($"                             WHERE {PKVariablesString};\";\n");
+                        _Template.AppendLine($"            using SqlCommand Command = new SqlCommand(Query, Connection);");
+
                         foreach (var PK in _EntityToPrimaryKey[EntityName].Keys.ToList())
                         {
-                            _Template.AppendLine($"                    Command.Parameters.AddWithValue(\"@{PK}\", {PK});");
+                            _Template.AppendLine($"            Command.Parameters.AddWithValue(\"@{PK}\", {PK});");
 
                         }
-                        _Template.AppendLine($"                    try");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                         Connection.Open();\n");
-                        _Template.AppendLine($"                         SqlDataReader Reader = await Command.ExecuteReaderAsync();\n");
-                        _Template.AppendLine($"                         if (Reader.Read())");
+                        _Template.AppendLine($"            try");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"                 Connection.Open();\n");
+                        _Template.AppendLine($"                 SqlDataReader Reader = await Command.ExecuteReaderAsync();\n");
+                        _Template.AppendLine($"                 if (Reader.Read())");
+                        _Template.AppendLine($"                 {{");
+                        _Template.AppendLine($"                     dto =");
+                        _Template.AppendLine($"                         new {GetDto}");
                         _Template.AppendLine($"                         {{");
-                        _Template.AppendLine($"                             dto =");
-                        _Template.AppendLine($"                                 new {GetDto}");
-                        _Template.AppendLine($"                                 {{");
                         foreach (var PropertyPair in _EntityNameToProperties[EntityName])
                         {
 
-                            _Template.AppendLine($"                                     {PropertyPair.Key} = Reader.{Utility.MapDataTypeToReaderMethod(PropertyPair.Value)}(Reader.GetOrdinal(\"{PropertyPair.Key}\")),");
+                            _Template.AppendLine($"                             {PropertyPair.Key} = Reader.{Utility.MapDataTypeToReaderMethod(PropertyPair.Value)}(Reader.GetOrdinal(\"{PropertyPair.Key}\")),");
 
 
                         }
-                        _Template.AppendLine($"                                 }};");
-                        _Template.AppendLine($"                         }}\n");
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                    catch");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                }}");
+                        _Template.AppendLine($"                         }};");
+                        _Template.AppendLine($"                 }}\n");
+                        _Template.AppendLine($"            }}");
+                        _Template.AppendLine($"            catch");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"            }}");
+                       // _Template.AppendLine($"                }}");
                         break;
                     }
 
@@ -519,25 +517,23 @@ namespace GeneratorBusiness
                     {
 
 
-                        _Template.AppendLine($"                string Query = @\"DELETE FROM {_EntityToTableName[EntityName]}");
-                        _Template.AppendLine($"                                 WHERE {PKVariablesString};\";\n");
-                        _Template.AppendLine($"                using (SqlCommand Command = new SqlCommand(Query, Connection))");
-                        _Template.AppendLine($"                {{");
+                        _Template.AppendLine($"            string Query = @\"DELETE FROM {_EntityToTableName[EntityName]}");
+                        _Template.AppendLine($"                             WHERE {PKVariablesString};\";\n");
+                        _Template.AppendLine($"            using SqlCommand Command = new SqlCommand(Query, Connection);");
                         foreach (var PK in PksList)
                         {
-                            _Template.AppendLine($"                    Command.Parameters.AddWithValue(\"@{PK}\", {PK});");
+                            _Template.AppendLine($"            Command.Parameters.AddWithValue(\"@{PK}\", {PK});");
 
                         }
-                        _Template.AppendLine($"                    try");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                         Connection.Open();\n");
-                        _Template.AppendLine($"                         AffectedRows = await Command.ExecuteNonQueryAsync();\n");
+                        _Template.AppendLine($"            try");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"                 Connection.Open();\n");
+                        _Template.AppendLine($"                 AffectedRows = await Command.ExecuteNonQueryAsync();\n");
 
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                    catch");
-                        _Template.AppendLine($"                    {{");
-                        _Template.AppendLine($"                    }}");
-                        _Template.AppendLine($"                }}");
+                        _Template.AppendLine($"            }}");
+                        _Template.AppendLine($"            catch");
+                        _Template.AppendLine($"            {{");
+                        _Template.AppendLine($"            }}");
                         break;
                     }
 
@@ -568,10 +564,10 @@ namespace GeneratorBusiness
                 _Template.AppendLine($"            int AffectedRows = 0;");
             }
                 
-            _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
-            _Template.AppendLine($"            {{");
+            _Template.AppendLine($"            using SqlConnection Connection = new SqlConnection({ConnectionString});");
+
             AddFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName, isThereIdentityPK);
-            _Template.AppendLine($"            }}");
+
             if (isThereIdentityPK)
                 _Template.AppendLine($"            return NewId;");
             else
@@ -589,7 +585,7 @@ namespace GeneratorBusiness
             _Template.Append($"        public async Task <bool> UpdateAsync ({UpdateDtoName} dto");
             foreach (var PropertyPair in _EntityNameToProperties[EntityName])
             {
-                if (_EntityToPrimaryKey[EntityName].Keys.ToList().Exists(PK => PK == PropertyPair.Key))
+                if (_EntityToPrimaryKey[EntityName].Keys.Contains(PropertyPair.Key))
                 {
                     _Template.Append($", {PropertyPair.Value} {PropertyPair.Key}");
                     PrimaryKeysToVariable.Add(PropertyPair.Key, $"@{PropertyPair.Key}");
@@ -603,10 +599,8 @@ namespace GeneratorBusiness
             _Template.AppendLine(")");
             _Template.AppendLine($"        {{");
             _Template.AppendLine($"            int AffectedRows = 0;");
-            _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
-            _Template.AppendLine($"            {{");
+            _Template.AppendLine($"            using SqlConnection Connection = new SqlConnection({ConnectionString});");
             UpdateFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName, PropertyToVariable, PrimaryKeysToVariable);
-            _Template.AppendLine($"            }}");
             _Template.AppendLine($"            return AffectedRows != 0;");
             _Template.AppendLine($"        }}\n");
         }
@@ -627,10 +621,8 @@ namespace GeneratorBusiness
             _Template.AppendLine(")");
             _Template.AppendLine($"        {{");
             _Template.AppendLine($"            {GetDtoName}? dto = null;");
-            _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
-            _Template.AppendLine($"            {{");
+            _Template.AppendLine($"            using SqlConnection Connection = new SqlConnection({ConnectionString});");
             GetFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName, GetDtoName);
-            _Template.AppendLine($"            }}");
             _Template.AppendLine($"            return dto;");
             _Template.AppendLine($"        }}\n");
         }
@@ -650,10 +642,8 @@ namespace GeneratorBusiness
             _Template.AppendLine(")");
             _Template.AppendLine($"        {{");
             _Template.AppendLine($"            int AffectedRows = 0;");
-            _Template.AppendLine($"            using (SqlConnection Connection = new SqlConnection({ConnectionString}))");
-            _Template.AppendLine($"            {{");
+            _Template.AppendLine($"            using SqlConnection Connection = new SqlConnection({ConnectionString});");
             DeleteFunctionCodeBasedOnDataAccessMode(_dto.DataAccessMode, EntityName,PkNames);
-            _Template.AppendLine($"            }}");
             _Template.AppendLine($"            return AffectedRows > 0;");
             _Template.AppendLine($"        }}\n");
         }
@@ -699,18 +689,20 @@ namespace GeneratorBusiness
 
         }
 
-        public bool InjectPackage(string Projectpath, string PackageName, string Version)
+
+       public enum enInjectPackageStatus { Success,MoreThanOneCsprojFile, csprojFileloadFailed, PackagesAlreadyExists  }
+        public (bool status, enInjectPackageStatus Details) InjectPackage(string Projectpath, string PackageName, string Version)
         {
             var csprojFile = Directory.GetFiles($"{Projectpath}", "*.csproj");
             if (csprojFile.Length > 1)
-            {
-                return false; //there are more than one .csproj file...user should specify which one to write the references on
+            { //TODO: solve this issue
+                return (false, enInjectPackageStatus.MoreThanOneCsprojFile); //there are more than one .csproj file...user should specify which one to write the references in
             }
 
             XDocument csprojFileContent = XDocument.Load(csprojFile[0]);
             if (csprojFileContent.Root == null)
             {
-                return false;
+                return (false, enInjectPackageStatus.csprojFileloadFailed);
             }
 
 
@@ -726,14 +718,14 @@ namespace GeneratorBusiness
             XAttribute VersionAttr = new XAttribute("Version", Version);
             PackageReference.Add(new[] { IncludeAttr, VersionAttr });
             if (ItemGroup.Elements().FirstOrDefault(x => x == PackageReference) == default)
-                return false; //we already added the package
+                return (false, enInjectPackageStatus.PackagesAlreadyExists); //we already added the package
             ItemGroup.Add(PackageReference);
 
 
 
             csprojFileContent.Save(csprojFile[0]);
 
-            return true;
+            return (true, enInjectPackageStatus.Success);
         }
         private void GenerateRepos()
         {
@@ -758,10 +750,8 @@ namespace GeneratorBusiness
             if (_dto.TargetPlatform == enTargetPlatform.NetCore)
                 InjectPackage(_dto.DataAccessProjectPath, "Microsoft.Data.SqlClient", "7.0.1");
            
-            //TODO: fix the Linq code structure in GenerateRepo()
-            //TODO: make sure InjectPackage() function is correct
             //TODO: Add code of Stored procedures mode
-
+            //TODO: Inject created classes so they can be identifed in .Net framework project
         }
     }
 
