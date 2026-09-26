@@ -29,6 +29,10 @@ namespace GeneratorBusiness
         Dictionary<string, Dictionary<string, string>> _EntityToDtosClassNames = new Dictionary<string, Dictionary<string, string>>();
         //DtoFunction, DtoName
         Dictionary<string, string> _EntityToTableName = new Dictionary<string, string>();
+
+        enum enSP_Type { Add,Update,Delete, Get}
+        Dictionary<string, enSP_Type> _SP_NameToType = new Dictionary<string, enSP_Type>();
+
         DataAccessGeneratorDTO _dto;
 
         string _ProjectName;
@@ -194,9 +198,10 @@ namespace GeneratorBusiness
                                     ON ic.object_id = c.object_id
                                    AND ic.column_id = c.column_id
                                 WHERE i.is_primary_key = 1
-                                  AND i.object_id = OBJECT_ID('{Pair.Value}');"; //return primaryKeys of Table
+                                  AND i.object_id = OBJECT_ID(@TableName);"; //return primaryKeys of Table
                 using SqlCommand Command = new SqlCommand(Query, connection);
 
+                Command.Parameters.AddWithValue("@TableName", Pair.Value);
                 using SqlDataReader reader = Command.ExecuteReader();
                
 
@@ -220,6 +225,65 @@ namespace GeneratorBusiness
 
 
 
+        }
+
+        private void SaveStoredProceduresNames()
+        {
+            using SqlConnection connection = new SqlConnection(_dto.ConnectionString);
+
+            connection.Open();
+
+            foreach (var Pair in _EntityToTableName)
+            {
+                string query = @"
+                                   SELECT DISTINCT
+                                       p.name AS ProcedureName,
+                                       m.definition AS ProcedureDefinition
+                                   FROM sys.procedures p
+                                   INNER JOIN sys.sql_modules m
+                                       ON p.object_id = m.object_id
+                                   INNER JOIN sys.sql_expression_dependencies d
+                                       ON p.object_id = d.referencing_id
+                                   INNER JOIN sys.tables t
+                                       ON d.referenced_id = t.object_id
+                                   WHERE t.name = @TableName;
+                               ";
+                using SqlCommand Command = new SqlCommand(query, connection);
+                Command.Parameters.AddWithValue("@TableName", Pair.Value);
+                using SqlDataReader reader = Command.ExecuteReader();
+
+
+               
+                string PS_Definition;
+                while (reader.Read())
+                {
+                    PS_Definition = reader.GetString(reader.GetOrdinal("ProcedureDefinition"));
+                    var SplittedDefinition = PS_Definition.ToLower().Split();
+
+                    if (SplittedDefinition.Contains("insert"))
+                    {
+                        _SP_NameToType.Add(reader.GetString(reader.GetOrdinal("ProcedureName")), enSP_Type.Add);
+
+                    }
+                    else if (SplittedDefinition.Contains("update"))
+                    {
+                        _SP_NameToType.Add(reader.GetString(reader.GetOrdinal("ProcedureName")), enSP_Type.Update);
+                    }
+                    else if (SplittedDefinition.Contains("select"))
+                    {
+                        _SP_NameToType.Add(reader.GetString(reader.GetOrdinal("ProcedureName")), enSP_Type.Get);
+                    }
+                    else if (SplittedDefinition.Contains("Delete"))
+                    {
+                        _SP_NameToType.Add(reader.GetString(reader.GetOrdinal("ProcedureName")), enSP_Type.Update);
+                    }
+
+
+
+                }
+
+                _EntityToPrimaryKey.Add(Pair.Key, ProcedureNameToDefinition);
+            }
         }
 
         void GenerateDtoClasses(string EntityName, string FolderName)
@@ -349,7 +413,7 @@ namespace GeneratorBusiness
                         }
                         _Template.AppendLine($"            try");
                         _Template.AppendLine($"            {{");
-                        _Template.AppendLine($"                 Connection.Open();\n");
+                        _Template.AppendLine($"                 await Connection.OpenAsync();\n");
                         _Template.AppendLine($"                 AffectedRows = await Command.ExecuteNonQueryAsync();\n");
 
                         _Template.AppendLine($"            }}");
@@ -406,7 +470,7 @@ namespace GeneratorBusiness
                         }
                         _Template.AppendLine($"            try");
                         _Template.AppendLine($"            {{");
-                        _Template.AppendLine($"                 Connection.Open();\n");
+                        _Template.AppendLine($"                 await Connection.OpenAsync();\n");
                         if (AnyIdentityPK)
                         {
                             _Template.AppendLine($"                 var result = await Command.ExecuteScalarAsync();\n");
@@ -430,7 +494,16 @@ namespace GeneratorBusiness
 
                 case enDataAccessMode.StoredProcedures:
                     {
-                        //TODO:
+                        _Template.Append($"            using SqlConnection connection = new SqlConnection(_connectionString);");
+                        _Template.Append($"            using SqlCommand Command = new SqlCommand(\"{}\", connection);");
+                        _Template.Append($"            Command.CommandType = CommandType.StoredProcedure;\n");
+                        foreach (var Property in PropertiesToAddList)
+                        {
+                            _Template.Append($"            Command.Parameters.AddWithValue(\"@{Property}\", ");
+                            _Template.AppendLine($"dto.{Property});");
+                        }
+                        _Template.Append($"            using SqlConnection connection = new SqlConnection(_connectionString);");
+
                         break;
                     }
 
@@ -466,7 +539,7 @@ namespace GeneratorBusiness
                         }
                         _Template.AppendLine($"            try");
                         _Template.AppendLine($"            {{");
-                        _Template.AppendLine($"                 Connection.Open();\n");
+                        _Template.AppendLine($"                 await Connection.OpenAsync();\n");
                         _Template.AppendLine($"                 SqlDataReader Reader = await Command.ExecuteReaderAsync();\n");
                         _Template.AppendLine($"                 if (Reader.Read())");
                         _Template.AppendLine($"                 {{");
@@ -527,7 +600,7 @@ namespace GeneratorBusiness
                         }
                         _Template.AppendLine($"            try");
                         _Template.AppendLine($"            {{");
-                        _Template.AppendLine($"                 Connection.Open();\n");
+                        _Template.AppendLine($"                 await Connection.OpenAsync();\n");
                         _Template.AppendLine($"                 AffectedRows = await Command.ExecuteNonQueryAsync();\n");
 
                         _Template.AppendLine($"            }}");
@@ -750,8 +823,10 @@ namespace GeneratorBusiness
             if (_dto.TargetPlatform == enTargetPlatform.NetCore)
                 InjectPackage(_dto.DataAccessProjectPath, "Microsoft.Data.SqlClient", "7.0.1");
            
+           
             //TODO: Add code of Stored procedures mode
             //TODO: Inject created classes so they can be identifed in .Net framework project
+            //TODO: handle the try catch blocks in the repos functions....make them log the exeptions or anything else
         }
     }
 
